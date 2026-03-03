@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Sinf 2.0 • Gamified Rewards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap');
+        
+        :root {
+            --neon-cyan: #22f0ff;
+            --neon-purple: #c026d3;
+        }
+        
+        .tail-container {
+            font-family: 'Press Start 2P', system-ui;
+        }
+        
+        .neon-text {
+            text-shadow: 
+                0 0 10px var(--neon-cyan),
+                0 0 20px var(--neon-cyan),
+                0 0 40px var(--neon-purple);
+        }
+        
+        .game-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .game-card:hover {
+            transform: translateY(-12px) scale(1.05);
+            box-shadow: 0 0 30px -5px rgb(34 240 255);
+        }
+        
+        .scan-line {
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400%); }
+        }
+        
+        .leaderboard-row {
+            transition: all 0.3s ease;
+        }
+        
+        .leaderboard-row:hover {
+            background-color: #27272a;
+            transform: scale(1.02);
+        }
+        
+        .modal {
+            animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.6); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .points-glow {
+            animation: pointsPulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="tail-container bg-zinc-950 text-white overflow-x-hidden">
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-[radial-gradient(at_center,#18181b_0%,#09090b_70%)]">
+        <div class="max-w-md w-full mx-4">
+            <!-- Logo -->
+            <div class="flex justify-center mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-14 h-14 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-2xl shadow-purple-500/50">
+                        🎮
+                    </div>
+                    <div>
+                        <h1 class="text-4xl font-bold tracking-tighter neon-text">SMART</h1>
+                        <h1 class="text-4xl font-bold tracking-tighter -mt-3 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">SINF 2.0</h1>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 shadow-2xl">
+                <div class="flex border-b border-zinc-700 mb-8">
+                    <button onclick="switchRoleTab(0)" id="tab-student"
+                            class="flex-1 py-4 text-sm font-medium border-b-2 border-cyan-400 text-cyan-400">STUDENT</button>
+                    <button onclick="switchRoleTab(1)" id="tab-teacher"
+                            class="flex-1 py-4 text-sm font-medium text-zinc-400 hover:text-white">TEACHER</button>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-xs tracking-widest text-zinc-400 mb-1 block">EMAIL</label>
+                        <input id="login-email" type="email" value="ahmad@students.smartrsinf.uz"
+                               class="w-full bg-zinc-800 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-5 py-4 text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs tracking-widest text-zinc-400 mb-1 block">PASSWORD</label>
+                        <input id="login-password" type="password" value="demo123"
+                               class="w-full bg-zinc-800 border border-zinc-700 focus:border-cyan-400 rounded-2xl px-5 py-4 text-sm outline-none">
+                    </div>
+
+                    <button onclick="handleLogin()"
+                            class="w-full bg-gradient-to-r from-cyan-400 to-purple-600 hover:from-cyan-500 hover:to-purple-700 transition-all py-5 rounded-2xl font-bold text-lg tracking-widest flex items-center justify-center gap-3">
+                        <i class="fas fa-gamepad"></i>
+                        <span id="login-btn-text">ENTER CLASSROOM</span>
+                    </button>
+
+                    <div class="text-center">
+                        <button onclick="quickDemoLogin('student')" 
+                                class="text-xs text-cyan-400 hover:text-cyan-300 underline">Quick Demo: Student</button>
+                        <span class="mx-3 text-zinc-600">•</span>
+                        <button onclick="quickDemoLogin('teacher')" 
+                                class="text-xs text-purple-400 hover:text-purple-300 underline">Quick Demo: Teacher</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-8 text-[10px] text-zinc-500">
+                Powered by Firebase • Grok Imagine UI
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="main-app" class="hidden min-h-screen">
+        <!-- TOP NAV -->
+        <nav class="bg-zinc-900 border-b border-zinc-800 fixed w-full z-50">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div onclick="navigateTo('dashboard')" class="flex items-center gap-3 cursor-pointer">
+                        <div class="w-9 h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-2xl flex items-center justify-center text-2xl">🎮</div>
+                        <div class="font-bold text-2xl tracking-tighter neon-text">SMART SINf</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-8">
+                    <div onclick="navigateTo('dashboard')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                        <i class="fas fa-home"></i> DASHBOARD
+                    </div>
+                    <div onclick="navigateTo('leaderboard')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                        <i class="fas fa-trophy"></i> LEADERBOARD
+                    </div>
+                    <div onclick="navigateTo('profile')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                        <i class="fas fa-user"></i> PROFILE
+                    </div>
+
+                    <!-- Role specific -->
+                    <div id="nav-student-only" class="hidden items-center gap-8">
+                        <div onclick="navigateTo('convert')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                            <i class="fas fa-exchange-alt"></i> CONVERT
+                        </div>
+                    </div>
+                    <div id="nav-teacher-only" class="hidden items-center gap-8">
+                        <div onclick="navigateTo('assign')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                            <i class="fas fa-plus-circle"></i> ASSIGN
+                        </div>
+                        <div onclick="navigateTo('reports')" class="nav-link cursor-pointer flex items-center gap-2 text-sm font-medium hover:text-cyan-400 transition-colors">
+                            <i class="fas fa-brain"></i> AI
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Theme toggle -->
+                        <button onclick="toggleTheme()" class="w-10 h-10 rounded-2xl bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center">
+                            <i id="theme-icon" class="fas fa-moon"></i>
+                        </button>
+                        
+                        <!-- User -->
+                        <div onclick="navigateTo('profile')" class="flex items-center gap-3 cursor-pointer">
+                            <div id="user-avatar" class="w-9 h-9 rounded-2xl overflow-hidden border-2 border-cyan-400">
+                                <img src="https://i.pravatar.cc/128?u=ahmad" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <div id="user-name" class="text-sm font-medium">Ahmad</div>
+                                <div id="user-role" class="text-[10px] text-emerald-400">Student • 10A</div>
+                            </div>
+                        </div>
+
+                        <button onclick="logout()" 
+                                class="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl text-sm font-medium flex items-center gap-2">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="pt-20 pb-12 max-w-7xl mx-auto px-6">
+            
+            <!-- DASHBOARD -->
+            <div id="screen-dashboard" class="screen">
+                <div class="flex justify-between items-end mb-10">
+                    <div>
+                        <div class="text-emerald-400 text-sm font-medium tracking-widest">WELCOME BACK</div>
+                        <div id="dash-welcome" class="text-5xl font-bold neon-text">Ahmad Khan</div>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-6 text-center">
+                            <div class="text-xs text-zinc-400">TOTAL POINTS</div>
+                            <div id="dash-points" class="text-6xl font-bold text-cyan-400 points-glow">2,450</div>
+                        </div>
+                        <div onclick="navigateTo('leaderboard')" class="bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-6 text-center cursor-pointer hover:border-purple-400 transition-colors">
+                            <div class="text-xs text-zinc-400">CURRENT RANK</div>
+                            <div class="text-6xl font-bold text-purple-400">#3</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-emerald-400/30 rounded-3xl p-6">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="text-sm">Homework Completed</div>
+                                <div class="text-4xl font-bold text-emerald-400 mt-2">18</div>
+                            </div>
+                            <i class="fas fa-book text-5xl text-emerald-400/20"></i>
+                        </div>
+                        <div class="h-2 bg-zinc-800 rounded-full mt-8 overflow-hidden">
+                            <div class="h-full w-[85%] bg-emerald-400"></div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-amber-400/30 rounded-3xl p-6">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="text-sm">Behavior Stars</div>
+                                <div class="text-4xl font-bold text-amber-400 mt-2">47</div>
+                            </div>
+                            <i class="fas fa-star text-5xl text-amber-400/20"></i>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-cyan-400/30 rounded-3xl p-6">
+                        <div class="flex justify-between">
+                            <div>
+                                <div class="text-sm">This Week</div>
+                                <div class="text-4xl font-bold text-cyan-400 mt-2">+420</div>
+                            </div>
+                            <i class="fas fa-fire text-5xl text-cyan-400/20"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="mb-12">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold">Recent Activity</h2>
+                        <button onclick="navigateTo('profile')" class="text-xs text-cyan-400 hover:underline">VIEW ALL →</button>
+                    </div>
+                    <div id="recent-activity" class="space-y-3">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+
+                <!-- Leaderboard mini -->
+                <div>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold">Top Students</h2>
+                        <button onclick="navigateTo('leaderboard')" class="text-xs text-cyan-400 hover:underline">FULL LEADERBOARD →</button>
+                    </div>
+                    <div id="mini-leaderboard" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEADERBOARD -->
+            <div id="screen-leaderboard" class="screen hidden">
+                <h1 class="text-4xl font-bold mb-8 flex items-center gap-4">
+                    <i class="fas fa-trophy text-yellow-400"></i> GLOBAL LEADERBOARD
+                </h1>
+                <div class="bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-700">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-zinc-700">
+                                <th class="text-left py-5 px-8 text-xs font-medium text-zinc-400">RANK</th>
+                                <th class="text-left py-5 px-8 text-xs font-medium text-zinc-400">STUDENT</th>
+                                <th class="text-left py-5 px-8 text-xs font-medium text-zinc-400">CLASS</th>
+                                <th class="text-right py-5 px-8 text-xs font-medium text-zinc-400">POINTS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="text-sm">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CONVERT / REWARDS -->
+            <div id="screen-convert" class="screen hidden">
+                <h1 class="text-4xl font-bold mb-2">Game Currency Exchange</h1>
+                <p class="text-zinc-400 mb-10">Spend your points on real in-game currency • Teacher approval required</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="game-grid">
+                    <!-- JS populated game cards -->
+                </div>
+
+                <div class="mt-16 bg-zinc-900 border border-zinc-700 rounded-3xl p-8">
+                    <h3 class="font-bold mb-6 flex items-center gap-3">
+                        <i class="fas fa-history"></i> Transaction History
+                    </h3>
+                    <div id="transaction-history" class="space-y-4 text-sm">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ASSIGN POINTS (Teacher) -->
+            <div id="screen-assign" class="screen hidden">
+                <h1 class="text-4xl font-bold mb-8">Assign Points</h1>
+                
+                <div class="max-w-lg bg-zinc-900 rounded-3xl p-8 border border-zinc-700">
+                    <div class="space-y-8">
+                        <div>
+                            <label class="block text-xs tracking-widest mb-2">SELECT STUDENT</label>
+                            <select id="assign-student" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-6 py-5 text-white">
+                                <!-- JS populated -->
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <button onclick="selectCategory(this)" data-cat="homework" 
+                                    class="category-btn active bg-emerald-400/10 border border-emerald-400 text-emerald-400 py-6 rounded-2xl hover:bg-emerald-400/20">HOMEWORK</button>
+                            <button onclick="selectCategory(this)" data-cat="exam" 
+                                    class="category-btn bg-amber-400/10 border border-amber-400 text-amber-400 py-6 rounded-2xl hover:bg-amber-400/20">EXAM</button>
+                            <button onclick="selectCategory(this)" data-cat="behavior" 
+                                    class="category-btn bg-purple-400/10 border border-purple-400 text-purple-400 py-6 rounded-2xl hover:bg-purple-400/20">BEHAVIOR</button>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs tracking-widest mb-2">POINTS TO AWARD</label>
+                            <div class="flex">
+                                <input id="assign-points" type="number" value="100" 
+                                       class="flex-1 bg-zinc-800 border border-zinc-700 rounded-l-2xl px-6 py-5 text-3xl font-bold outline-none">
+                                <div class="bg-zinc-700 rounded-r-2xl px-8 flex items-center font-medium text-cyan-400">PTS</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs tracking-widest mb-2">REASON (optional)</label>
+                            <input id="assign-reason" type="text" value="Great job on algebra quiz!" 
+                                   class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-6 py-5">
+                        </div>
+                        
+                        <button onclick="assignPoints()" 
+                                class="w-full py-7 bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-bold text-xl rounded-2xl hover:scale-105 active:scale-95 transition-all">
+                            AWARD POINTS 🎉
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pending approvals for teacher -->
+                <div class="mt-16">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        <span class="text-amber-400">⏳</span> Pending Conversions
+                    </h2>
+                    <div id="pending-approvals" class="space-y-4">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI REPORTS -->
+            <div id="screen-reports" class="screen hidden">
+                <h1 class="text-4xl font-bold mb-8 flex items-center gap-4">
+                    <i class="fas fa-brain"></i> AI AGENT
+                </h1>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Insights -->
+                    <div class="bg-zinc-900 rounded-3xl p-8 border border-red-400/30">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="uppercase text-xs font-medium text-red-400 tracking-widest">Cheat Detection</div>
+                            <button onclick="runAICheck()" 
+                                    class="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-2xl text-sm font-medium">RUN FULL SCAN</button>
+                        </div>
+                        <div id="ai-flags" class="space-y-6">
+                            <!-- populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Weekly Report -->
+                    <div class="bg-zinc-900 rounded-3xl p-8">
+                        <div class="mb-8">
+                            <div class="uppercase text-xs tracking-widest">WEEK 8 REPORT</div>
+                            <div class="text-3xl font-bold">Class Average: <span class="text-cyan-400">1,842</span></div>
+                        </div>
+                        <div class="h-80 bg-zinc-950 rounded-2xl flex items-end gap-2 px-8 pb-8">
+                            <!-- Fake bars -->
+                            <div class="flex-1 bg-gradient-to-t from-cyan-400 to-transparent rounded-t h-[45%]"></div>
+                            <div class="flex-1 bg-gradient-to-t from-cyan-400 to-transparent rounded-t h-[68%]"></div>
+                            <div class="flex-1 bg-gradient-to-t from-cyan-400 to-transparent rounded-t h-[92%]"></div>
+                            <div class="flex-1 bg-gradient-to-t from-cyan-400 to-transparent rounded-t h-[55%]"></div>
+                            <div class="flex-1 bg-gradient-to-t from-cyan-400 to-transparent rounded-t h-[80%]"></div>
+                        </div>
+                        <button onclick="generateReport()" 
+                                class="mt-8 w-full py-6 border border-dashed border-zinc-600 hover:border-cyan-400 rounded-2xl text-sm">DOWNLOAD PDF REPORT</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFILE -->
+            <div id="screen-profile" class="screen hidden">
+                <div class="max-w-2xl mx-auto">
+                    <div class="flex flex-col items-center">
+                        <div onclick="changeAvatar()" class="w-32 h-32 rounded-3xl overflow-hidden border-4 border-purple-400 cursor-pointer mb-6 relative">
+                            <img id="profile-avatar" src="https://i.pravatar.cc/300?u=ahmad" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-all">
+                                <i class="fas fa-camera text-3xl"></i>
+                            </div>
+                        </div>
+                        <div id="profile-name" class="text-4xl font-bold">Ahmad Khan</div>
+                        <div class="text-emerald-400 text-sm mt-1">10A • Smart Sinf Academy</div>
+                        
+                        <div class="mt-12 w-full bg-zinc-900 rounded-3xl p-8">
+                            <div class="flex justify-between items-center mb-8">
+                                <div class="text-6xl font-bold text-cyan-400" id="profile-points">2450</div>
+                                <div class="text-right">
+                                    <div class="text-xs uppercase">Next reward at</div>
+                                    <div class="text-2xl font-medium">3000 PTS</div>
+                                </div>
+                            </div>
+                            <div class="h-3 bg-zinc-800 rounded-3xl overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-cyan-400 to-purple-500 w-[81%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-12">
+                        <h3 class="uppercase text-xs tracking-widest mb-4">Point History (Last 30 days)</h3>
+                        <div id="profile-history" class="space-y-4">
+                            <!-- JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FACE ID MODAL -->
+    <div id="face-modal" class="hidden fixed inset-0 bg-black/90 z-[999] flex items-center justify-center">
+        <div class="modal bg-zinc-900 w-full max-w-md rounded-3xl p-8 text-center">
+            <div class="text-2xl font-bold mb-6">Teacher Face ID</div>
+            
+            <div class="relative mx-auto w-64 h-64 bg-black rounded-3xl overflow-hidden border-8 border-cyan-400">
+                <video id="face-video" class="w-full h-full object-cover" autoplay muted></video>
+                <div id="scan-overlay" class="absolute inset-0 pointer-events-none">
+                    <div class="scan-line absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
+                </div>
+                <div id="face-status" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-xs px-6 py-2 rounded-2xl hidden">
+                    Verifying...
+                </div>
+            </div>
+            
+            <button onclick="startFaceScan()" id="scan-btn"
+                    class="mt-10 w-full py-6 bg-cyan-400 hover:bg-cyan-300 text-black font-bold rounded-2xl">
+                START FACE SCAN
+            </button>
+            
+            <button onclick="closeFaceModal()" 
+                    class="mt-4 text-xs text-zinc-400 hover:text-white">Cancel</button>
+        </div>
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="success-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]">
+        <div class="modal bg-gradient-to-br from-zinc-900 to-emerald-950 border border-emerald-400 rounded-3xl max-w-sm w-full p-10 text-center">
+            <div id="success-icon" class="mx-auto w-20 h-20 bg-emerald-400/10 text-emerald-400 rounded-2xl flex items-center justify-center text-5xl mb-6">🎉</div>
+            <div id="success-title" class="text-3xl font-bold mb-2">Points Awarded!</div>
+            <div id="success-subtitle" class="text-zinc-400">+150 points to Omar</div>
+            
+            <button onclick="closeSuccessModal()" 
+                    class="mt-12 w-full py-5 bg-white text-black font-bold rounded-2xl">CONTINUE</button>
+        </div>
+    </div>
+
+    <script>
+        // =============== MOCK DATA ===============
+        let students = [
+            { id: 1, name: "Ahmad Khan", points: 2450, class: "10A", avatar: "https://i.pravatar.cc/128?u=ahmad" },
+            { id: 2, name: "Layla Ahmedova", points: 1890, class: "10A", avatar: "https://i.pravatar.cc/128?u=layla" },
+            { id: 3, name: "Omar Alimov", points: 3120, class: "10B", avatar: "https://i.pravatar.cc/128?u=omar" },
+            { id: 4, name: "Fatima Karimova", points: 1340, class: "10B", avatar: "https://i.pravatar.cc/128?u=fatima" },
+            { id: 5, name: "Zain Saidov", points: 2760, class: "10A", avatar: "https://i.pravatar.cc/128?u=zain" }
+        ];
+        
+        let transactions = [
+            { id: 1, date: "Today", student: "Ahmad Khan", type: "converted", amount: 500, game: "PUBG UC", status: "approved" },
+            { id: 2, date: "Yesterday", student: "Layla Ahmedova", type: "earned", amount: 120, reason: "Perfect exam" }
+        ];
+        
+        let pendingConversions = [];
+        
+        let currentUser = null;
+        let isTeacher = false;
+        
+        // Game currencies
+        const games = [
+            { id: "pubg", name: "PUBG Mobile", currency: "UC", rate: 60, emoji: "🔫", color: "from-orange-400 to-red-500" },
+            { id: "ml", name: "Mobile Legends", currency: "Diamonds", rate: 50, emoji: "⚔️", color: "from-blue-400 to-indigo-500" },
+            { id: "cod", name: "Call of Duty", currency: "CP", rate: 80, emoji: "🎯", color: "from-slate-400 to-gray-500" },
+            { id: "ea", name: "EA FC Mobile", currency: "Points", rate: 70, emoji: "⚽", color: "from-green-400 to-emerald-500" },
+            { id: "roblox", name: "Roblox", currency: "Robux", rate: 40, emoji: "🟥", color: "from-red-400 to-rose-500" },
+            { id: "ff", name: "Free Fire", currency: "Diamonds", rate: 60, emoji: "🔥", color: "from-amber-400 to-orange-500" },
+            { id: "brawl", name: "Brawl Stars", currency: "Gems", rate: 25, emoji: "⭐", color: "from-yellow-400 to-amber-500" },
+            { id: "cr", name: "Clash Royale", currency: "Gems", rate: 30, emoji: "👑", color: "from-purple-400 to-violet-500" },
+            { id: "coc", name: "Clash of Clans", currency: "Gems", rate: 35, emoji: "🏰", color: "from-sky-400 to-cyan-500" },
+            { id: "hok", name: "Honor of Kings", currency: "Diamonds", rate: 55, emoji: "🀄", color: "from-pink-400 to-rose-500" }
+        ];
+        
+        // =============== TAILWIND INIT ===============
+        function initTailwind() {
+            // Already loaded via CDN
+        }
+        
+        // =============== ROLE TAB ===============
+        function switchRoleTab(n) {
+            document.getElementById('tab-student').classList.toggle('border-b-2', n === 0);
+            document.getElementById('tab-student').classList.toggle('border-cyan-400', n === 0);
+            document.getElementById('tab-student').classList.toggle('text-cyan-400', n === 0);
+            document.getElementById('tab-student').classList.toggle('text-zinc-400', n !== 0);
+            
+            document.getElementById('tab-teacher').classList.toggle('border-b-2', n === 1);
+            document.getElementById('tab-teacher').classList.toggle('border-cyan-400', n === 1);
+            document.getElementById('tab-teacher').classList.toggle('text-cyan-400', n === 1);
+            document.getElementById('tab-teacher').classList.toggle('text-zinc-400', n !== 1);
+        }
+        
+        // =============== LOGIN ===============
+        function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            
+            if (email.includes("teacher") || document.getElementById('tab-teacher').classList.contains('text-cyan-400')) {
+                // Teacher path
+                isTeacher = true;
+                currentUser = { name: "Mrs. Khan", role: "Teacher", avatar: "https://i.pravatar.cc/128?u=khan" };
+                document.getElementById('face-modal').classList.remove('hidden');
+                startCamera();
+            } else {
+                // Student
+                isTeacher = false;
+                currentUser = students[0]; // Ahmad as demo student
+                completeLogin();
+            }
+        }
+        
+        function quickDemoLogin(role) {
+            if (role === 'teacher') {
+                isTeacher = true;
+                currentUser = { name: "Mrs. Khan", role: "Teacher", avatar: "https://i.pravatar.cc/128?u=khan" };
+                document.getElementById('face-modal').classList.remove('hidden');
+                startCamera();
+            } else {
+                isTeacher = false;
+                currentUser = students[0];
+                completeLogin();
+            }
+        }
+        
+        let videoStream = null;
+        
+        function startCamera() {
+            const video = document.getElementById('face-video');
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+                .then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.log("Camera not available in demo - simulating");
+                });
+        }
+        
+        function startFaceScan() {
+            document.getElementById('scan-btn').innerHTML = `
+                <span class="animate-pulse">SCANNING FACE...</span>
+            `;
+            document.getElementById('face-status').classList.remove('hidden');
+            
+            setTimeout(() => {
+                if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+                closeFaceModal();
+                completeLogin();
+            }, 2100);
+        }
+        
+        function closeFaceModal() {
+            document.getElementById('face-modal').classList.add('hidden');
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        }
+        
+        function completeLogin() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            renderUserHeader();
+            showScreen('dashboard');
+            renderAll();
+        }
+        
+        function logout() {
+            location.reload();
+        }
+        
+        // =============== RENDER USER ===============
+        function renderUserHeader() {
+            document.getElementById('user-avatar').innerHTML = `<img src="${currentUser.avatar}" class="w-full h-full object-cover">`;
+            document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
+            document.getElementById('user-role').innerHTML = isTeacher ? 
+                `<span class="text-purple-400">Teacher</span>` : 
+                `${currentUser.class} • Student`;
+            
+            // Show/hide nav
+            document.getElementById('nav-student-only').classList.toggle('hidden', isTeacher);
+            document.getElementById('nav-teacher-only').classList.toggle('hidden', !isTeacher);
+        }
+        
+        // =============== NAVIGATION ===============
+        function navigateTo(screen) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`screen-${screen}`).classList.remove('hidden');
+            
+            // Refresh content
+            if (screen === 'leaderboard') renderLeaderboard();
+            if (screen === 'convert') renderGames();
+            if (screen === 'assign') renderAssignStudents();
+            if (screen === 'reports') renderAI();
+            if (screen === 'profile') renderProfile();
+        }
+        
+        function showScreen(name) {
+            navigateTo(name);
+        }
+        
+        // =============== DASHBOARD ===============
+        function renderDashboard() {
+            if (!currentUser) return;
+            
+            document.getElementById('dash-welcome').textContent = currentUser.name;
+            document.getElementById('dash-points').textContent = isTeacher ? "8,920" : currentUser.points.toLocaleString();
+            
+            // Recent activity
+            const actHTML = transactions.slice(0, 3).map(t => `
+                <div class="flex gap-4 bg-zinc-900 border border-zinc-700 rounded-2xl p-5">
+                    <div class="w-10 h-10 rounded-2xl flex-shrink-0 ${t.type === 'earned' ? 'bg-emerald-400/10 text-emerald-400' : 'bg-purple-400/10 text-purple-400'} flex items-center justify-center">
+                        ${t.type === 'earned' ? '📘' : '💎'}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <div class="font-medium">${t.student || currentUser.name}</div>
+                            <div class="text-emerald-400 font-medium">+${t.amount}</div>
+                        </div>
+                        <div class="text-xs text-zinc-400">${t.reason || t.game || 'Activity'}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('recent-activity').innerHTML = actHTML;
+            
+            // Mini leaderboard
+            const sorted = [...students].sort((a,b) => b.points - a.points).slice(0,5);
+            let miniHTML = '';
+            sorted.forEach((s, i) => {
+                miniHTML += `
+                    <div onclick="navigateTo('leaderboard')" class="bg-zinc-900 border border-zinc-700 hover:border-cyan-400 rounded-3xl p-4 cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="text-3xl font-bold w-8 text-center text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600">${i+1}</div>
+                            <img src="${s.avatar}" class="w-12 h-12 rounded-2xl">
+                            <div class="flex-1 min-w-0">
+                                <div class="truncate text-sm">${s.name}</div>
+                                <div class="text-xs text-zinc-400">${s.points} pts</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('mini-leaderboard').innerHTML = miniHTML;
+        }
+        
+        // =============== LEADERBOARD ===============
+        function renderLeaderboard() {
+            const sorted = [...students].sort((a, b) => b.points - a.points);
+            let html = '';
+            sorted.forEach((student, index) => {
+                const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-zinc-300' : index === 2 ? 'text-amber-600' : 'text-zinc-400';
+                html += `
+                    <tr class="leaderboard-row border-b border-zinc-800 last:border-none hover:bg-zinc-800">
+                        <td class="py-6 px-8">
+                            <span class="${rankColor} font-bold text-xl">${index + 1}</span>
+                        </td>
+                        <td class="py-6 px-8">
+                            <div class="flex items-center gap-4">
+                                <img src="${student.avatar}" class="w-11 h-11 rounded-2xl ring-2 ring-offset-2 ring-offset-zinc-900 ring-zinc-700">
+                                <div>
+                                    <div class="font-medium">${student.name}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-6 px-8 text-zinc-400">${student.class}</td>
+                        <td class="py-6 px-8 text-right font-mono text-xl font-bold text-cyan-400">${student.points.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('leaderboard-body').innerHTML = html;
+        }
+        
+        // =============== GAME CONVERT ===============
+        function renderGames() {
+            let html = '';
+            games.forEach(game => {
+                html += `
+                    <div class="game-card bg-zinc-900 border border-zinc-700 hover:border-white/30 rounded-3xl p-6">
+                        <div class="h-16 flex items-center justify-center text-6xl mb-6">${game.emoji}</div>
+                        <div class="font-bold text-center text-lg mb-1">${game.name}</div>
+                        <div class="text-center text-xs text-zinc-400 mb-8">${game.currency}</div>
+                        
+                        <div class="bg-zinc-950 rounded-2xl p-4 mb-6">
+                            <div class="text-[10px] text-zinc-400">CONVERSION RATE</div>
+                            <div class="flex items-baseline justify-center gap-1 text-3xl font-bold">
+                                100 <span class="text-xs font-normal text-zinc-400 mx-1">PTS</span> 
+                                <span class="text-cyan-400">=</span> 
+                                <span class="text-cyan-400">${game.rate}</span> ${game.currency}
+                            </div>
+                        </div>
+                        
+                        <input id="input-${game.id}" type="number" placeholder="Points to spend" value="500"
+                               class="w-full bg-black border border-zinc-700 rounded-2xl py-4 px-6 text-center text-xl font-medium outline-none mb-4">
+                        
+                        <button onclick="requestConversion('${game.id}')" 
+                                class="w-full py-5 bg-white text-black font-bold rounded-2xl hover:bg-cyan-300 active:scale-95 transition-all">
+                            REQUEST ${game.currency}
+                        </button>
+                    </div>
+                `;
+            });
+            document.getElementById('game-grid').innerHTML = html;
+        }
+        
+        function requestConversion(gameId) {
+            const game = games.find(g => g.id === gameId);
+            const input = document.getElementById(`input-${gameId}`);
+            const pts = parseInt(input.value) || 500;
+            
+            if (!currentUser || currentUser.points < pts) {
+                alert("Not enough points!");
+                return;
+            }
+            
+            // Deduct points
+            currentUser.points -= pts;
+            
+            // Add to pending
+            pendingConversions.push({
+                id: Date.now(),
+                student: currentUser.name,
+                game: game.name,
+                currency: game.currency,
+                pointsSpent: pts,
+                amountReceived: Math.floor(pts / 100 * game.rate),
+                status: "pending"
+            });
+            
+            // Add transaction
+            transactions.unshift({
+                id: Date.now(),
+                date: "Just now",
+                student: currentUser.name,
+                type: "converted",
+                amount: pts,
+                game: game.name + " " + game.currency,
+                status: "pending"
+            });
+            
+            launchConfetti();
+            renderDashboard();
+            renderGames();
+            renderTransactionHistory();
+            
+            showSuccessModal(`Request sent for ${Math.floor(pts / 100 * game.rate)} ${game.currency}`, "Teacher will approve shortly");
+        }
+        
+        function renderTransactionHistory() {
+            let html = '';
+            transactions.forEach(t => {
+                html += `
+                    <div class="flex items-center gap-5 bg-zinc-950 rounded-2xl p-5">
+                        <div class="text-4xl">${t.type === 'converted' ? '💎' : '📘'}</div>
+                        <div class="flex-1">
+                            <div class="font-medium">${t.game || t.reason}</div>
+                            <div class="text-xs text-zinc-400">${t.date}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono ${t.type === 'earned' ? 'text-emerald-400' : 'text-purple-400'}"> 
+                                ${t.type === 'earned' ? '+' : '-'}${t.amount}
+                            </div>
+                            <div class="text-[10px] text-zinc-500">${t.status || ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('transaction-history').innerHTML = html;
+        }
+        
+        // =============== TEACHER ASSIGN ===============
+        function renderAssignStudents() {
+            let options = '';
+            students.forEach(s => {
+                options += `<option value="${s.id}">${s.name} (${s.points} pts)</option>`;
+            });
+            document.getElementById('assign-student').innerHTML = options;
+            
+            renderPendingApprovals();
+        }
+        
+        function selectCategory(el) {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active', 'bg-emerald-400/20', 'border-emerald-400', 'text-emerald-400'));
+            el.classList.add('active', 'bg-emerald-400/20', 'border-emerald-400', 'text-emerald-400');
+        }
+        
+        function assignPoints() {
+            const studentId = parseInt(document.getElementById('assign-student').value);
+            const pts = parseInt(document.getElementById('assign-points').value) || 100;
+            const reason = document.getElementById('assign-reason').value || "Excellent work!";
+            
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+            
+            student.points += pts;
+            
+            transactions.unshift({
+                id: Date.now(),
+                date: "Just now",
+                student: student.name,
+                type: "earned",
+                amount: pts,
+                reason: reason
+            });
+            
+            renderAll();
+            
+            showSuccessModal(`+${pts} points`, `Awarded to ${student.name}`);
+            
+            // Anti-cheat simulation
+            if (pts > 500) {
+                setTimeout(() => {
+                    alert("⚠️ AI flagged high point award. Review recommended.");
+                }, 1200);
+            }
+        }
+        
+        function renderPendingApprovals() {
+            let html = '';
+            pendingConversions.forEach((conv, index) => {
+                html += `
+                    <div class="bg-zinc-900 border border-amber-400/30 rounded-3xl p-6 flex items-center">
+                        <div class="flex-1">
+                            <div class="font-medium">${conv.student}</div>
+                            <div class="text-sm text-zinc-400">${conv.game} • ${conv.amountReceived} ${conv.currency}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-amber-400">PENDING</div>
+                            <button onclick="approveConversion(${index})" 
+                                    class="mt-3 px-8 py-3 bg-emerald-400 text-black text-sm font-bold rounded-2xl">APPROVE</button>
+                        </div>
+                    </div>
+                `;
+            });
+            if (pendingConversions.length === 0) {
+                html = `<div class="text-center py-12 text-zinc-400">No pending requests</div>`;
+            }
+            document.getElementById('pending-approvals').innerHTML = html;
+        }
+        
+        function approveConversion(index) {
+            const conv = pendingConversions[index];
+            if (!conv) return;
+            
+            // Mark as approved
+            conv.status = "approved";
+            transactions.unshift({
+                id: Date.now(),
+                date: "Just now",
+                student: conv.student,
+                type: "converted",
+                amount: conv.pointsSpent,
+                game: conv.game,
+                status: "approved"
+            });
+            
+            pendingConversions.splice(index, 1);
+            
+            renderPendingApprovals();
+            renderTransactionHistory();
+            renderDashboard();
+            
+            showSuccessModal("Approved!", `${conv.amountReceived} ${conv.currency} granted`);
+        }
+        
+        // =============== AI SECTION ===============
+        function renderAI() {
+            const flagsHTML = `
+                <div class="flex gap-5 bg-red-400/10 border border-red-400/50 rounded-2xl p-5">
+                    <div class="text-red-400 text-4xl">⚠️</div>
+                    <div>
+                        <div class="font-medium">Omar Alimov +850 pts in 18 minutes</div>
+                        <div class="text-xs text-red-400/80">Flagged by AI • Possible multiple account usage</div>
+                    </div>
+                </div>
+                <div class="flex gap-5 bg-amber-400/10 border border-amber-400/50 rounded-2xl p-5">
+                    <div class="text-amber-400 text-4xl">📉</div>
+                    <div>
+                        <div class="font-medium">3 students with identical point patterns</div>
+                        <div class="text-xs text-amber-400/80">Pattern match probability: 94%</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ai-flags').innerHTML = flagsHTML;
+        }
+        
+        function runAICheck() {
+            alert("🔍 AI Agent scan complete\n\n3 anomalies detected\nWeekly report generated");
+            renderAI();
+        }
+        
+        function generateReport() {
+            alert("📄 Weekly class report downloaded (demo)");
+        }
+        
+        // =============== PROFILE ===============
+        function renderProfile() {
+            document.getElementById('profile-avatar').src = currentUser.avatar;
+            document.getElementById('profile-name').textContent = currentUser.name;
+            document.getElementById('profile-points').textContent = currentUser.points;
+            
+            // History
+            const histHTML = transactions.slice(0, 6).map(t => `
+                <div class="flex justify-between items-center py-4 border-b border-zinc-700 last:border-none">
+                    <div>
+                        <div class="text-sm">${t.reason || t.game}</div>
+                        <div class="text-xs text-zinc-400">${t.date}</div>
+                    </div>
+                    <div class="font-mono ${t.type === 'earned' ? 'text-emerald-400' : 'text-purple-400'} text-xl">
+                        ${t.type === 'earned' ? '+' : '-'}${t.amount}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('profile-history').innerHTML = histHTML;
+        }
+        
+        function changeAvatar() {
+            const avatars = [
+                "https://i.pravatar.cc/300?u=ahmad2",
+                "https://i.pravatar.cc/300?u=robot",
+                "https://i.pravatar.cc/300?u=dragon"
+            ];
+            const random = avatars[Math.floor(Math.random() * avatars.length)];
+            currentUser.avatar = random;
+            document.getElementById('profile-avatar').src = random;
+            document.getElementById('user-avatar').innerHTML = `<img src="${random}" class="w-full h-full object-cover">`;
+        }
+        
+        // =============== UTILITIES ===============
+        function renderAll() {
+            renderDashboard();
+            renderLeaderboard();
+            renderGames();
+            renderTransactionHistory();
+            renderAssignStudents();
+            renderProfile();
+        }
+        
+        function showSuccessModal(title, subtitle) {
+            document.getElementById('success-title').textContent = title;
+            document.getElementById('success-subtitle').textContent = subtitle;
+            document.getElementById('success-modal').classList.remove('hidden');
+            launchConfetti();
+        }
+        
+        function closeSuccessModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+        }
+        
+        function launchConfetti() {
+            confetti({
+                particleCount: 180,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+            setTimeout(() => {
+                confetti({
+                    particleCount: 80,
+                    angle: 60,
+                    spread: 50,
+                    origin: { x: 0.1 }
+                });
+            }, 300);
+        }
+        
+        function toggleTheme() {
+            // Demo always stays dark/neon
+            alert("🌙 Dark Neon Mode is already active (Light mode coming in v2.1)");
+        }
+        
+        // =============== KEYBOARD SHORTCUTS ===============
+        document.addEventListener('keydown', function(e) {
+            if (e.metaKey && e.key === "k") {
+                e.preventDefault();
+                alert("🔍 Command palette would open here (demo)");
+            }
+        });
+        
+        // =============== INITIALIZE ===============
+        window.onload = function() {
+            initTailwind();
+            // Default to student demo after 800ms (for visual)
+            setTimeout(() => {
+                // Auto quick login as student for immediate demo
+                isTeacher = false;
+                currentUser = students[0];
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                renderUserHeader();
+                renderAll();
+                navigateTo('dashboard');
+                
+                // Launch welcome confetti
+                setTimeout(launchConfetti, 800);
+            }, 800);
+        };
+        
+        // Firebase placeholder comment
+        /*
+        // In production replace mocks with:
+        import { initializeApp } from "firebase/app";
+        import { getAuth, onAuthStateChanged } from "firebase/auth";
+        import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
+        
+        const firebaseConfig = { ...your config... };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Real-time listener example:
+        onSnapshot(collection(db, "students"), (snapshot) => {
+            students = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderAll();
+        });
+        */
+        
+        console.log('%c✅ Smart Sinf 2.0 fully loaded - Production ready demo', 'color:#22f0ff; font-family:monospace; font-size:13px');
+    </script>
+</body>
+</html>
